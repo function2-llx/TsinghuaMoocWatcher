@@ -122,7 +122,7 @@ def switch():
 if __name__ == '__main__':
 	options = webdriver.FirefoxOptions()
 	# options.set_headless()
-	browser = webdriver.Firefox(firefox_options=options)
+	browser = webdriver.Firefox(firefox_options=options, executable_path='../bin/geckodriver.exe', service_log_path='../log/')
 	sys.stderr.write('打开浏览器\n')
 	home = 'http://tsinghua.xuetangx.com'
 	browser.get(home)
