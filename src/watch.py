@@ -2,6 +2,7 @@ import sys
 import getpass
 from time import sleep
 from selenium import webdriver
+from bs4 import BeautifulSoup
 
 def get_chapters():
 	global browser
@@ -20,8 +21,11 @@ def get_lessons(chapter_id):
 def get_lesson(chapter_id, lesson_id):
 	return get_lessons(chapter_id)[lesson_id]
 
+head = '\r' + ' ' * 20 + '\r'
+
 def study(lesson):
 	global browser
+	global head
 	
 	element = lesson.find_element_by_xpath('./a')
 	sys.stderr.write('进入课程：' + element.text + '\n')
@@ -31,11 +35,16 @@ def study(lesson):
 		browser.find_element_by_class_name('xt_video_player_play_btn').click()
 		sleep(5)
 		while True:
-			try:
-				browser.find_element_by_class_name('xt_video_player_play_btn_pause')
-			except:
-				sys.stderr.write('学习完成\n')
+			soup = BeautifulSoup(browser.page_source, 'html.parser')
+			element = soup.find(class_='xt_video_player_current_time_display')
+			span = element.find_all('span')
+			cur, tot = span[0].text.strip(), span[1].text.strip()
+			sys.stderr.write(head + cur + ':' + tot)
+			if cur == tot:
+
+				sys.stderr.write(head + '学习完成\n')
 				break
+			sys.stderr.flush()
 	except:
 		sys.stderr.write('本章无视频\n')
 
@@ -120,6 +129,7 @@ def switch():
 			return
 
 if __name__ == '__main__':
+
 	options = webdriver.FirefoxOptions()
 	# options.set_headless()
 	browser = webdriver.Firefox(firefox_options=options)
