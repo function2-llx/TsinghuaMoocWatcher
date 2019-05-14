@@ -4,6 +4,10 @@ from time import sleep
 from selenium import webdriver
 from bs4 import BeautifulSoup
 
+options = webdriver.FirefoxOptions()
+# options.set_headless()
+browser = webdriver.Firefox(firefox_options=options)
+
 def get_chapters():
 	global browser
 
@@ -26,7 +30,7 @@ head = '\r' + ' ' * 20 + '\r'
 def study(lesson):
 	global browser
 	global head
-	
+
 	element = lesson.find_element_by_xpath('./a')
 	sys.stderr.write('进入课程：' + element.text + '\n')
 	element.click()
@@ -39,7 +43,7 @@ def study(lesson):
 			element = soup.find(class_='xt_video_player_current_time_display')
 			span = element.find_all('span')
 			cur, tot = span[0].text.strip(), span[1].text.strip()
-			sys.stderr.write(head + cur + ':' + tot)
+			sys.stderr.write(head + cur + '/' + tot)
 			if cur == tot:
 
 				sys.stderr.write(head + '学习完成\n')
@@ -53,60 +57,66 @@ class LoginInfo(object):
 	def __init__(self, flag: bool, info: str):
 		self.flag = flag
 		self.info = info
-		
+
 
 def login():
 	global browser
 
-	usernameEdit = browser.find_element_by_xpath('/html/body/div/div[2]/div/div[1]/div/form/div[1]/input')
-	passwordEdit = browser.find_element_by_xpath('/html/body/div/div[2]/div/div[1]/div/form/div[2]/input')
-	usernameEdit.clear()
-	passwordEdit.clear()
+	username_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[1]/input')
+	pwd_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[2]/input')
+	username_edit.clear()
+	pwd_edit.clear()
 
 	# 获取用户名
 	while True:
-		usernameEdit.clear()
+		username_edit.clear()
 		username = input('enter username: ')
 		if not username:
 			sys.stderr.write('用户名不能为空\n')
 			continue
-		usernameEdit.send_keys(username)
+		username_edit.send_keys(username)
 		break
 
 	# 获取密码
 	while True:
-		passwordEdit.clear()
+		pwd_edit.clear()
 		password = getpass.getpass('enter password: ')
 		if not password:
 			sys.stderr.write('密码不能为空\n')
 			continue
-		passwordEdit.send_keys(password)
+		pwd_edit.send_keys(password)
 		break
 
 	# 提交登录表单，保存当前url
 	url = browser.current_url
-	browser.find_element_by_xpath('//button[text()="立即登录"]').click() #click login button
-
+	browser.find_element_by_xpath('//*[@id="loginSubmit"]').click() #click login button
+	# sys.stderr.write(url)
 	# 判断是否登录成功
 	while True:
 		if url != browser.current_url:
+			print(233)
 			return LoginInfo(True, '登录成功')
-		
-		error = browser.find_elements_by_class_name('help-block')
-		if error:
-			return LoginInfo(False, error[0].text)
 
-def getCourse():
+		# error = browser.find_element_by_class_name('error_message')
+		error = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[3]/div/p')
+		# print(244)
+		if (error.text):
+			return LoginInfo(False, error.text)
+
+		sleep(1)
+
+def get_course():
 	global browser
 
 	while True:
-		courses = browser.find_elements_by_class_name('container-courselist--item')
+		courses = browser.find_elements_by_class_name('name_link')
+		# courses = browser.find_element_by_xpath('//*[@id="courses_list"]')
 		if courses:
 			course_num = len(courses)
 			for i in range(course_num):
 				course = courses[i]
-				sys.stderr.write(str(i) + '. ' + course.find_element_by_class_name('item-title').text + '\n')
-			
+				sys.stderr.write('%d.%s\n' % (i, course.text))
+
 			while True:
 				course_id = input("输入观看的课程编号：")
 				try:
@@ -116,7 +126,7 @@ def getCourse():
 				except Exception as e:
 					sys.stderr.write(str(e) + '\n')
 					continue
-				
+
 				return courses[course_id]
 
 def switch():
@@ -129,14 +139,9 @@ def switch():
 			return
 
 if __name__ == '__main__':
-
-	options = webdriver.FirefoxOptions()
-	# options.set_headless()
-	browser = webdriver.Firefox(firefox_options=options)
 	sys.stderr.write('打开浏览器\n')
-	home = 'http://tsinghua.xuetangx.com'
+	home = 'http://www.xuetangx.com/dashboard/course/'
 	browser.get(home)
-	browser.find_element_by_xpath('//a[text()="登录"]').click() #enter login page
 
 	# 登录
 	while True:
@@ -146,16 +151,16 @@ if __name__ == '__main__':
 			break
 
 	# enter specified course
-	course = getCourse()
-	course.find_element_by_xpath('.//a[text()="继续学习"]').click()
-	sys.stderr.write('进入课程：' + course.find_element_by_class_name('item-title').text + '\n')
+	course = get_course()
+	sys.stderr.write('进入课程：' + course.text + '\n')
+	course.click()
 	switch()
 
 	# 等待章节自动展开
 	while True:
 		if get_chapters():
 			break
-	
+
 	chapters = get_chapters()
 	chapter_num = len(chapters)
 	for i in range(chapter_num):
