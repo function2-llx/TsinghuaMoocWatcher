@@ -1,3 +1,4 @@
 src/geckodriver.log
 src/printText.py
 src/data.yaml
+.vscode/

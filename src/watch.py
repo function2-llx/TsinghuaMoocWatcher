@@ -3,6 +3,7 @@ import getpass
 from time import sleep
 from selenium import webdriver
 from bs4 import BeautifulSoup
+import re
 
 options = webdriver.FirefoxOptions()
 # options.set_headless()
@@ -25,11 +26,6 @@ def get_chapter(chapter_id):
 
 def get_lessons(chapter):
     return chapter.find_elements_by_tag_name('li')
-# def get_lessons(chapter_id):
-#     return get_chapter(chapter_id).find_elements_by_xpath('./ul/li')
-
-# def get_lesson(chapter_id, lesson_id):
-#     return get_lessons(chapter_id)[lesson_id]
 
 def study(lesson):
     global browser
@@ -50,12 +46,11 @@ def study(lesson):
             cur, tot = span[0].text.strip(), span[1].text.strip()
             sys.stderr.write(head + cur + '/' + tot)
             if cur == tot:
-
                 sys.stderr.write(head + '学习完成\n')
                 break
             sys.stderr.flush()
     except:
-        sys.stderr.write('本章无视频\n')
+        sys.stderr.write('本节无视频\n')
 
 
 class LoginInfo(object):
@@ -67,10 +62,15 @@ class LoginInfo(object):
 def login():
     global browser
 
-    username_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[1]/input')
-    pwd_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[2]/input')
-    username_edit.clear()
-    pwd_edit.clear()
+    while True:
+        try:
+            username_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[1]/input')
+            pwd_edit = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[1]/div[2]/input')
+            username_edit.clear()
+            pwd_edit.clear()
+            break
+        except:
+            pass
 
     # 获取用户名
     while True:
@@ -92,8 +92,6 @@ def login():
         pwd_edit.send_keys(password)
         break
 
-    
-
     # 提交登录表单，保存当前url
     url = browser.current_url
     browser.find_element_by_xpath('//*[@id="loginSubmit"]').click() #click login button
@@ -104,11 +102,14 @@ def login():
             print(233)
             return LoginInfo(True, '登录成功')
 
-        # error = browser.find_element_by_class_name('error_message')
-        error = browser.find_element_by_xpath('/html/body/div[3]/div/div/div[1]/div/div[2]/form/div[3]/div/p')
-        # print(244)
-        if (error.text):
-            return LoginInfo(False, error.text)
+        try:
+            error = browser.find_element_by_class_name('error_message')
+            if error.text:
+                return LoginInfo(False, error.text)
+            # hint(error.text)
+            # break
+        except:
+            pass
 
         sleep(1)
 
@@ -139,30 +140,41 @@ def get_course():
 def get_currnet_chapter():
     global browser
 
-    return browser.find_element_by_class_name('chapter is-open')
+    while True:
+        try:
+            return browser.find_element_by_class_name('is-open')
+            # return browser.find_element_by_css_selector("[class="]")
+            
+        except:
+            pass
+    
 
 def hint(info):
-    sys.stderr.write('%s\n' % info)
+    sys.stderr.write('%s\n' % str(info))
 
 def switch_to_next_chapter():
     # currnet_chapter = get_currnet_chapter()
     chapters = get_chapters()
     for i, chapter in enumerate(chapters):
-        if chapter.get_attribute('class') == 'chapter is-open':
+        if re.match('.*is-open.*', chapter.get_attribute('class')):
+        # if chapter.get_attribute('class') == 'chapter is-open':
             if chapter is chapters[-1]:
                 return False
             
             chapters[i + 1].find_element_by_tag_name('a').click()
+            study(get_lessons(get_chapter(i + 1))[0])
             
             return True
 
 def switch_to_next_lesson():
-    currnet_chapter = get_currnet_chapter()
+    # currnet_chapter = 
     # lessons = currnet_chapter.find_elements_by_tag_name('li')
-    lessons = get_lessons(chapter=currnet_chapter)
+    lessons = get_lessons(chapter=get_currnet_chapter())
+    hint('len :%d' % len(lessons))
     # for i , lesson in zip(len(lessons), lessons):
     for i, lesson in enumerate(lessons):
-        if lesson.get_attribute('class') == 'active ':
+        hint(lesson.get_attribute('class') + '233')
+        if re.match('.*active.*', lesson.get_attribute('class')):
             if lesson is lessons[-1]:
                 return switch_to_next_chapter()
             study(lesson=lessons[i + 1])
@@ -175,11 +187,6 @@ def start_watch(start_lesson):
     study(lesson=start_lesson)
     while switch_to_next_lesson():
         pass
-
-# def get_last_lesson():
-#     global browser
-
-#     browser.find_element_by_xpath('/html/body/div[5]/div[2]/div[4]/div/section/p/a')
 
 def from_last():
     global browser
@@ -201,9 +208,11 @@ def from_last():
 
             return True
         else:
+            # hint('失败')
             return False
 
     except:
+        hint('失败')
         return False
         # pass
 
@@ -223,11 +232,10 @@ def get_start_lesson_id(lessons_num):
     while True:
         lesson_id = int(input('请输入开始课节的编号：'))
         try:
-            if 0 <= lesson_id < chapter_num:
-                return lesson_id
+            assert 0 <= lesson_id < chapter_num
+            return lesson_id
         except:
             hint('课节编号不合法')
-
 
         
 if __name__ == '__main__':
@@ -241,6 +249,14 @@ if __name__ == '__main__':
         sys.stderr.write(info.info + '\n')
         if (info.flag):
             break
+
+        browser.find_element_by_xpath('/html/body/div[3]/div/div/div[2]').click()   # 关闭
+        while True:
+            try:
+                browser.find_element_by_xpath('//*[@id="header_login"]').click()    # 打开登录
+                break
+            except:
+                pass
 
     # enter specified course
     course = get_course()
@@ -256,12 +272,9 @@ if __name__ == '__main__':
 
     # 等待章节自动展开
     get_chapters()
-    # while True:
-    # 	if get_chapters():
-    # 		break
-
 
     if not from_last():
+        browser.refresh()
         chapters = get_chapters()
         chapter_num = len(chapters)
         sleep(1)
@@ -275,23 +288,12 @@ if __name__ == '__main__':
             chapter = get_chapter(chapter_id=chapter_id)
         
         lessons = get_lessons(chapter)
+        cnt = 0
         for i, lesson in enumerate(lessons):
             hint('%d. %s\n' % (i, lesson.text))
+            cnt += 1
 
-        lesson_id = get_start_lesson_id(len(lessons))
+        lesson_id = get_start_lesson_id(cnt)
         start_watch(lessons[lesson_id])
-    
-
-    # for i in range(chapter_id, chapter_num):
-    # 	chapter = get_chapter(chapter_id=i)
-    # 	if chapter.get_attribute('class') != 'chapter is-open':
-    # 		chapter.find_element_by_xpath('./h3/a').click()
-    # 		chapter = get_chapter(chapter_id=i)
-    # 	sys.stderr.write("开始学习章节：" + chapter.find_element_by_xpath('./h3/a').text + '\n')
-
-    # 	lesson_num = len(get_lessons(chapter_id=i))
-    # 	for j in range(lesson_num):
-    # 		lesson = get_lesson(chapter_id=i, lesson_id=j)
-    # 		study(lesson)
 
     browser.close()
