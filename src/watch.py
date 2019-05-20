@@ -15,7 +15,7 @@ def get_chapters():
         try:
             father = browser.find_element_by_xpath('/html/body/div[5]/div[2]/div[4]/div/div/div/nav')
             return father.find_elements_by_tag_name('div')
-        except Exception as e:
+        except:
             # print(e)
             pass
             # return elements[0].find_elements_by_xpath('./div')
