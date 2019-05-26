@@ -7,17 +7,11 @@ make sure that geckodriver executable is in your PATH.
 
 ## usage
 
-- windows:
-
-  ```bash
-  cd src
-  python watch.py
-  ```
-
-- Linux/MacOS:
-
-  ```bash
-  python3 src/watch.py
-  ```
+```bash
+cd src
+python watch.py
+```
 
 - you may use chrome or other browsers instead easily by slightly modifying the code
+
+- put the corresponding webdriver  executable (geckodriver for FireFox, ChromeDriver for Chrome) in the PATH
